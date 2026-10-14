@@ -82,7 +82,7 @@ p = tb.text_frame.paragraphs[0]; p.text = "CNNs vs Vision Transformers for Skin-
 p.font.size = Pt(36); p.font.bold = True; p.font.color.rgb = NAVY
 p = tb.text_frame.add_paragraph(); p.text = "A controlled comparison of ResNet-50, EfficientNet-B0 and Swin-T on ISIC 2019"
 p.font.size = Pt(22); p.font.color.rgb = GREY
-p = tb.text_frame.add_paragraph(); p.text = f"\n{AUTHOR}  ·  Deep Learning, UPE  ·  Final project, October 2026"; p.font.size = Pt(18)
+p = tb.text_frame.add_paragraph(); p.text = f"\n{AUTHOR}  ·  Aprendizaje Profundo  ·  Final project, October 2026"; p.font.size = Pt(18)
 notes(s, "Hello. My project compares three ImageNet-pretrained backbones on the ISIC 2019 dermoscopy dataset under one identical protocol, and looks at cost and interpretability, not only accuracy.")
 
 # 2 Problem --------------------------------------------------------------------------------
