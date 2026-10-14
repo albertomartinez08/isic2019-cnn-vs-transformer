@@ -1,0 +1,14 @@
+# large / regenerable artefacts
+results/*/best.pt
+results/*/test_probs.npy
+results/test_targets.npy
+paper/*.aux
+paper/*.log
+paper/*.out
+paper/*.blg
+paper/*.fls
+paper/*.fdb_latexmk
+paper/*.synctex.gz
+paper/build.log
+__pycache__/
+*.pyc

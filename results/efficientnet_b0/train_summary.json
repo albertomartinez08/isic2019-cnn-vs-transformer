@@ -1,0 +1,27 @@
+{
+  "model": "efficientnet_b0",
+  "timm_name": "efficientnet_b0.ra_in1k",
+  "params_M": 4.017796,
+  "gflops": 0.769089984,
+  "epochs_run": 12,
+  "best_epoch": 8,
+  "epochs_to_95pct_best": 5,
+  "best_val_macro_f1": 0.5830744664092763,
+  "best_val_acc": 0.7403746097814776,
+  "total_train_time_min": 13.662719019254048,
+  "mean_epoch_time_s": 61.398438572883606,
+  "peak_vram_mb": 1499.93212890625,
+  "batch_size": 32,
+  "lr": 0.0001,
+  "protocol": {
+    "epochs": 12,
+    "batch_size": 32,
+    "lr": 0.0001,
+    "weight_decay": 0.05,
+    "warmup_epochs": 1,
+    "label_smoothing": 0.1,
+    "patience": 4,
+    "num_workers": 6,
+    "amp": true
+  }
+}

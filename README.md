@@ -1,0 +1,101 @@
+# Comparative Evaluation of CNN and Transformer Backbones on ISIC 2019
+
+Final project, Deep Learning (UPE, Oct 2026). Author: José Alberto Martínez Navarro.
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/albertomartinez08/isic2019-cnn-vs-transformer/blob/main/notebooks/ISIC2019_CNN_vs_Transformer.ipynb) Three ImageNet-pretrained backbones are fine-tuned
+with an identical protocol on the ISIC 2019 dermoscopy dataset (8 classes, 25,331 images) and
+compared on accuracy, macro-F1, AUC, computational cost (parameters, FLOPs, latency, VRAM,
+training time, convergence speed) and interpretability (Grad-CAM).
+
+| Model | Family | timm weights |
+|---|---|---|
+| ResNet-50 | CNN | `resnet50.a1_in1k` |
+| EfficientNet-B0 | CNN | `efficientnet_b0.ra_in1k` |
+| Swin-T | Transformer | `swin_tiny_patch4_window7_224.ms_in1k` |
+| Ensemble | soft voting of the three | – |
+
+## Results (test split, RTX 4070 Laptop, fp16)
+
+| Model | Acc. | Bal. acc. | Macro-F1 | AUC | Params (M) | GFLOPs | Latency b1 (ms) | Train (min) | Peak VRAM (MB) |
+|---|---|---|---|---|---|---|---|---|---|
+| ResNet-50 | 0.711 | 0.601 | 0.551 | 0.918 | 23.5 | 8.17 | 29.1 | 20 | 1807 |
+| EfficientNet-B0 | 0.738 | 0.610 | 0.578 | 0.906 | 4.0 | 0.77 | 36.9 | 14 | 1500 |
+| Swin-T | 0.761 | 0.639 | 0.641 | 0.900 | 27.5 | 8.98 | 71.2 | 23 | 2667 |
+| Ensemble (soft voting) | 0.778 | 0.680 | 0.665 | 0.942 | 55.1 | 17.92 | 137.1 | – | – |
+
+Full tables, per-class F1, confusion matrices, training curves and Grad-CAM maps are in
+`results/` and `figures/`; the paper is `paper/main.pdf`, the slides `slides/presentation.pptx`.
+
+## 0. Fast path for reviewers (no 9 GB download)
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/albertomartinez08/isic2019-cnn-vs-transformer/blob/main/notebooks/ISIC2019_CNN_vs_Transformer.ipynb)
+
+* `notebooks/ISIC2019_CNN_vs_Transformer.ipynb` runs the whole pipeline on Colab. Section 2a
+  downloads the 256-px cache (`resized256.zip`, 442 MB, Google Drive folder: https://drive.google.com/drive/folders/152UjJSMcixu5zDfhYwLnEinIV8gwSw4I) instead
+  of the raw 9.1 GB zip, and `python src/train.py --model efficientnet_b0 --subset 0.1 --epochs 2`
+  is a 3-minute smoke test.
+* All numbers in the paper can be regenerated from the stored logs without a GPU:
+  `python src/summarize.py`.
+
+## 1. Environment
+
+Tested on Windows 11, Python 3.13, NVIDIA RTX 4070 Laptop (8 GB), CUDA 12.8.
+
+```bash
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
+pip install -r requirements.txt
+```
+
+## 2. Data
+
+Download the public ISIC 2019 training set (no account needed) into `DATA_DIR/raw`
+(default `C:\Users\josep\datasets\ISIC2019`; override with the `ISIC_DATA_DIR` env var):
+
+```bash
+curl -L -O https://isic-challenge-data.s3.amazonaws.com/2019/ISIC_2019_Training_Input.zip       # 9.1 GB
+curl -L -O https://isic-challenge-data.s3.amazonaws.com/2019/ISIC_2019_Training_GroundTruth.csv
+curl -L -O https://isic-challenge-data.s3.amazonaws.com/2019/ISIC_2019_Training_Metadata.csv
+```
+
+Then build the split and the 256-px cache (≈10 min):
+
+```bash
+python src/prepare_data.py
+```
+
+The split is 70/15/15, stratified by class and **grouped by `lesion_id`** so that no lesion
+appears in two splits (`results/splits.csv`, `results/dataset_stats.json`).
+
+## 3. Reproduce every experiment
+
+```bash
+python src/train.py --model resnet50
+python src/train.py --model efficientnet_b0
+python src/train.py --model swin_t
+python src/evaluate.py --all          # test metrics + latency/FLOPs, confusion matrices
+python src/ensemble.py                # soft-voting ensembles
+python src/gradcam.py                 # figures/gradcam_grid.png
+python src/summarize.py               # summary.csv, LaTeX tables, figures
+```
+
+Or run everything with `run_all.ps1` (PowerShell) / `run_all.sh`.
+
+Shared protocol (see `src/config.py`): 224x224 input, seed 42, batch 32, AdamW (lr 1e-4,
+wd 0.05), 1 warm-up epoch + cosine decay, 12 epochs max with early stopping (patience 4) on
+validation macro-F1, class-weighted cross-entropy (inverse sqrt frequency) with label
+smoothing 0.1, mixed precision, identical augmentation (random resized crop, flips, rotation,
+color jitter).
+
+## 4. Outputs
+
+```
+results/<model>/history.json          per-epoch loss / accuracy / F1 / time / VRAM
+results/<model>/train_summary.json    params, GFLOPs, training time, best epoch, epochs to 95 %
+results/<model>/test_metrics.json     accuracy, balanced accuracy, macro-F1, AUC, per-class, latency
+results/summary.csv, *.tex            aggregated tables used in the paper
+figures/                              confusion matrices, curves, cost plots, Grad-CAM grid
+paper/                                IEEE conference paper (LaTeX + PDF)
+slides/                               final presentation
+```
+
+Checkpoints (`best.pt`, ~100 MB each) are not committed; they are regenerated by `train.py`.

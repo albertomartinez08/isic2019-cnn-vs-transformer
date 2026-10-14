@@ -1,0 +1,81 @@
+\subsection{Which model is ``better''?}
+On the decision metrics the ranking is unambiguous: Swin-T is the best single backbone
+(\SwinAcc\% accuracy, \SwinBalAcc\% balanced accuracy, \SwinFone\% macro-F1), followed by
+EfficientNet-B0 (\EffnetFone\%) and ResNet-50 (\ResnetFone\%). The gap between the transformer and
+the best CNN is 6.3 macro-F1 points, which is larger than the 2.7 points separating the two CNNs,
+so on this dataset the family label does matter---but not in the direction that is often assumed
+for small medical datasets~\cite{matsoukas2021transformers}. Swin-T also converges faster
+(\SwinFone\% macro-F1 is already reached at epoch 2 of 12 in validation, Fig.~\ref{fig:curves}),
+which we attribute to its stronger ImageNet features and to the hierarchical windowed attention,
+which lets it integrate colour and texture cues over the whole lesion rather than within a fixed
+receptive field.
+
+The ranking by macro AUC is the \emph{opposite} (ResNet-50 \ResnetAuc{} $>$ EfficientNet-B0
+\EffnetAuc{} $>$ Swin-T \SwinAuc{}). AUC measures the quality of the probability ranking of each
+class against the rest, whereas accuracy and F1 measure the hard arg-max decision. Swin-T fits the
+training set much more tightly (its training loss ends at 1.00 versus 1.42 for ResNet-50 with the
+same label smoothing), which produces sharper, more confident posteriors: better decisions on the
+hard examples but slightly worse calibrated rankings on the easy ones. This is a reminder that a
+single number can hide a trade-off, and that a clinical triage tool that thresholds probabilities
+should be evaluated with AUC and calibration, not only with accuracy.
+
+\subsection{Cost: FLOPs are not latency}
+EfficientNet-B0 has 6$\times$ fewer parameters and 10$\times$ fewer FLOPs than ResNet-50, trains
+in \EffnetTrain{} instead of \ResnetTrain{} minutes and uses the least VRAM
+(\EffnetVram{}~GB). Yet on the GPU it is \emph{slower} at inference (\EffnetLat{}~ms versus
+\ResnetLat{}~ms at batch~1; \EffnetThr{} versus \ResnetThr{} images/s at batch~32). Its
+depthwise-separable convolutions are memory-bound and launch many small kernels that cannot
+exploit tensor cores, so the theoretical savings do not materialise on this hardware; they would on
+a CPU or mobile NPU, which is the setting EfficientNet was designed for~\cite{tan2019efficientnet}.
+Swin-T has almost the same FLOPs as ResNet-50 (\SwinGflops{} versus \ResnetGflops{}~GFLOPs) but is
+2.4$\times$ slower at batch~1, needs 1.5$\times$ more VRAM during training
+(\SwinVram{} versus \ResnetVram{}~GB) and the longest wall-clock time (\SwinTrain{} min). The
+accuracy gain of the transformer therefore has a concrete price: roughly 2.4$\times$ the latency and
+1.5$\times$ the training memory of the residual CNN. In a batch setting (offline screening of a
+clinic's daily images) this price is negligible; in an interactive or embedded setting it is the
+deciding factor.
+
+\subsection{Generalisation across classes}
+All models are strong on the majority class NV (F1 0.85--0.88) and on the visually distinctive
+VASC and BCC, and weak on the three rare or morphologically overlapping diagnoses AK, SCC and DF
+(Table~\ref{tab:perclass}). The confusion matrices (Fig.~\ref{fig:cm}) show two persistent error
+clusters: MEL$\leftrightarrow$NV (166 melanomas predicted as nevi and 159 nevi predicted as
+melanoma by Swin-T) and the keratinocyte group AK$\leftrightarrow$BKL$\leftrightarrow$SCC, which is
+also where dermatologists disagree most. Inverse-square-root class weighting raised the recall of
+the rare classes (DF recall 0.60, VASC 0.81, SCC 0.46 for Swin-T) without collapsing the majority
+class, but the balanced accuracy of 0.60--0.64 shows that the imbalance is only partly solved.
+Swin-T is the most \emph{uniform} model: it has the best F1 in seven of the eight classes and is
+the only backbone that lifts DF above 0.6, suggesting that its global receptive field helps on
+classes defined by subtle, lesion-wide texture rather than by a local pattern.
+
+\subsection{What the models look at}
+The Grad-CAM maps (Fig.~\ref{fig:gradcam}) are consistent with that reading. The two CNNs produce
+compact, centred blobs on the pigmented core of the lesion, which is adequate for NV, BCC, DF and
+VASC but misses the periphery that distinguishes MEL from NV and AK from BKL. Swin-T produces
+sparser, multi-focal maps (e.g. two separated hot spots on the melanoma, a ring on the vascular
+lesion) that follow the irregular border and the asymmetric pigment distribution---precisely the
+``ABCD'' cues used by clinicians. The failures are informative too: on the BKL example all three
+models fire on the darkest region and predict melanoma, and on the SCC example EfficientNet-B0
+spreads its evidence over the background, where hair and scale artefacts are present. Such
+artefact-driven activations are a known risk on ISIC~\cite{cassidy2022isic} and argue for lesion
+segmentation or artefact removal in a deployed system.
+
+\subsection{Are the families complementary?}
+The soft-voting ensemble improves on the best single model by 2.3 macro-F1 points
+(\EnsFone\% versus \SwinFone\%), by 4.0 balanced-accuracy points and raises the macro AUC to
+\EnsAuc{}, the best value in the study. Among the pairwise ensembles, the two CNNs together reach
+only 61.5\% macro-F1, whereas EfficientNet-B0+Swin-T reaches 66.4\%, almost the value of the full
+ensemble; i.e. nearly all the gain comes from combining a CNN with the transformer. The two
+families make different mistakes, which is the strongest practical argument for hybrid systems,
+at the cost of \EnsLat{}~ms per image.
+
+\subsection{Comparison with the literature and limitations}
+Our balanced accuracies (0.60--0.68) are in the range reported for single ImageNet-pretrained
+models on ISIC~2019 at 224~px, and below the 0.63--0.74 obtained by the challenge winner with
+multi-resolution EfficientNet ensembles trained on far more compute and with
+metadata~\cite{gessert2020isic2019}; note that our numbers are measured on an internal,
+in-distribution split and are therefore not directly comparable to the official out-of-distribution
+test set. Limitations: a single seed per model (differences below $\approx$1 point should not be
+over-interpreted), a fixed 224~px resolution that discards fine dermoscopic structure, no use of
+age/sex/site metadata, no test-time augmentation, and a learning rate that was not tuned per
+architecture (a per-model search would most likely narrow, not widen, the gaps).

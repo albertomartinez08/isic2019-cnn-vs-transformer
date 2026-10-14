@@ -1,0 +1,10 @@
+\begin{tabular}{llcccccccccccc}
+\toprule
+Model & Type & Acc. & Bal. Acc. & Macro-F1 & AUC & Params (M) & GFLOPs & Lat. (ms) & img/s & Train (min) & VRAM (MB) & Best ep. & Ep. 95\% \\
+\midrule
+ResNet-50 & CNN & 0.711 & 0.601 & 0.551 & 0.918 & 23.5 & 8.17 & 29.1 & 724 & 20.4 & 1807 & 12 & 6 \\
+EfficientNet-B0 & CNN & 0.738 & 0.610 & 0.578 & 0.906 & 4.0 & 0.77 & 36.9 & 511 & 13.7 & 1500 & 8 & 5 \\
+Swin-T & Transformer & 0.761 & 0.639 & 0.641 & 0.900 & 27.5 & 8.98 & 71.2 & 554 & 23.4 & 2667 & 8 & 6 \\
+Ensemble (soft voting) & Hybrid & 0.778 & 0.680 & 0.665 & 0.942 & 55.1 & 17.92 & 137.1 & 194 & -- & -- & -- & -- \\
+\bottomrule
+\end{tabular}

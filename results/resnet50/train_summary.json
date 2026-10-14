@@ -1,0 +1,27 @@
+{
+  "model": "resnet50",
+  "timm_name": "resnet50.a1_in1k",
+  "params_M": 23.524424,
+  "gflops": 8.17430528,
+  "epochs_run": 12,
+  "best_epoch": 12,
+  "epochs_to_95pct_best": 6,
+  "best_val_macro_f1": 0.5754719273151538,
+  "best_val_acc": 0.7203433922996878,
+  "total_train_time_min": 20.431403843561807,
+  "mean_epoch_time_s": 85.49323383967082,
+  "peak_vram_mb": 1807.28955078125,
+  "batch_size": 32,
+  "lr": 0.0001,
+  "protocol": {
+    "epochs": 12,
+    "batch_size": 32,
+    "lr": 0.0001,
+    "weight_decay": 0.05,
+    "warmup_epochs": 1,
+    "label_smoothing": 0.1,
+    "patience": 4,
+    "num_workers": 6,
+    "amp": true
+  }
+}

@@ -1,0 +1,4 @@
+W1013 18:54:44.227000 6844 site-packages\torch\utils\flop_counter.py:29] triton not found; flop counting will not work for triton kernels
+[resnet50] acc=0.7109 bal_acc=0.6013 macroF1=0.5507 AUC=0.9180 lat_b1=29.1ms  724 img/s
+[efficientnet_b0] acc=0.7378 bal_acc=0.6099 macroF1=0.5778 AUC=0.9061 lat_b1=36.9ms  511 img/s
+[swin_t] acc=0.7609 bal_acc=0.6394 macroF1=0.6412 AUC=0.9004 lat_b1=71.2ms  554 img/s

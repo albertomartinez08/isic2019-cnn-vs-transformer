@@ -1,0 +1,21 @@
+We compared a residual CNN, an efficiency-oriented CNN and a hierarchical vision transformer on
+ISIC~2019 under a strictly shared, lesion-grouped protocol and measured accuracy, cost and
+interpretability side by side. Three conclusions follow. (i)~With ImageNet pre-training, the
+transformer is the most accurate and the most class-uniform backbone on 25k dermoscopic images
+(\SwinFone\% macro-F1, \SwinBalAcc\% balanced accuracy), contradicting the view that transformers
+need very large medical datasets; its evidence maps also align better with clinical ABCD cues.
+(ii)~That accuracy costs about 2.4$\times$ the inference latency and 1.5$\times$ the training memory
+of ResNet-50, and the cheapest model by FLOPs (EfficientNet-B0) is not the fastest on a GPU, so
+deployment decisions must be based on measured latency on the target hardware rather than on
+parameter counts. (iii)~CNNs and transformers make complementary errors: a simple soft-voting
+ensemble gives the best macro-F1 (\EnsFone\%) and AUC (\EnsAuc{}) of the study. Our practical
+recommendation is EfficientNet-B0 for CPU/edge budgets, Swin-T when a GPU is available, and the
+CNN+transformer ensemble for offline screening where accuracy dominates.
+
+Future work should (a)~repeat the study with several seeds and at 384--512~px, where fine
+dermoscopic structures become visible; (b)~add patient metadata and test-time augmentation, both
+of which helped the challenge winners~\cite{gessert2020isic2019}; (c)~evaluate calibration and
+decision thresholds for triage, given the AUC/F1 disagreement observed here; (d)~replace ImageNet
+with dermoscopy-specific self-supervised pre-training (DINO/MAE on unlabelled ISIC archives), which
+targets the domain gap directly; and (e)~validate externally on the official ISIC~2019 test set
+and on clinical (non-dermoscopic) datasets such as PAD-UFES-20 to measure true generalisation.

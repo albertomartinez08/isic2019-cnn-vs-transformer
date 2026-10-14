@@ -1,0 +1,245 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{url}
+\renewcommand{\ttdefault}{cmtt} % Courier metrics are not installed in this TeX distribution
+\graphicspath{{../figures/}}
+\input{../results/macros.tex}
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+\begin{document}
+
+\title{CNNs versus Vision Transformers for Dermoscopic Skin-Lesion Classification:\\
+A Controlled Comparison of ResNet-50, EfficientNet-B0 and Swin-T on ISIC 2019}
+
+\author{\IEEEauthorblockN{José Alberto Martínez Navarro}
+\IEEEauthorblockA{\textit{Master's programme, Deep Learning course} \\
+\textit{Universidad Panamericana (UPE)}\\
+Aguascalientes, Mexico \\
+jamn2000080300@gmail.com}
+}
+
+\maketitle
+
+\begin{abstract}
+Automated classification of dermoscopic images is a mature application of deep learning, yet
+practitioners still face a practical question: should a clinical prototype be built on a
+convolutional backbone or on a vision transformer, and at what computational price? We present a
+controlled comparison of three ImageNet-pretrained architectures---ResNet-50, EfficientNet-B0 and
+Swin-T---fine-tuned on the eight-class ISIC~2019 dataset (\Ntotal{} images) under a strictly
+identical protocol: the same lesion-grouped stratified split, input resolution, augmentation,
+optimiser, schedule, class-weighted loss and early-stopping rule. Beyond accuracy and macro-F1 we
+report balanced accuracy, macro AUC, per-class F1, parameter count, FLOPs, peak training memory,
+training time, epochs to convergence and inference latency on a single consumer GPU, and we
+inspect the decision evidence of every model with Grad-CAM. On the held-out test split the best
+single model, \BestModel{}, reaches \BestFone\% macro-F1, while a soft-voting ensemble of the
+three backbones reaches \EnsFone\% macro-F1 and \EnsAuc{} macro AUC. The results show that the
+accuracy gap between architecture families is small compared with their gap in cost, and that
+the choice should be driven by the deployment budget rather than by the family label.
+\end{abstract}
+
+\begin{IEEEkeywords}
+skin lesion classification, dermoscopy, ISIC 2019, convolutional neural networks, vision
+transformers, transfer learning, Grad-CAM, computational cost
+\end{IEEEkeywords}
+
+\section{Introduction}
+Skin cancer is among the most frequently diagnosed cancers worldwide and melanoma, its deadliest
+form, is highly curable when detected early. Dermoscopy improves the diagnostic accuracy of
+trained dermatologists, but access to specialists is uneven, which motivates computer-aided
+diagnosis. Since Esteva~\textit{et al.}~\cite{esteva2017dermatologist} showed dermatologist-level
+performance with a convolutional neural network (CNN), deep learning has become the standard
+approach, and the International Skin Imaging Collaboration (ISIC) challenges
+\cite{codella2018isic,tschandl2018ham10000,combalia2019bcn20000} have provided the public
+benchmarks on which progress is measured.
+
+Two developments make a fresh comparison worthwhile. First, vision transformers (ViT, Swin)
+\cite{dosovitskiy2021vit,liu2021swin} now rival CNNs on natural images, and their suitability for
+medical imaging, where datasets are small and class-imbalanced, is still debated
+\cite{matsoukas2021transformers}. Second, in clinical and embedded settings the relevant question
+is rarely ``which model is most accurate'' but ``which model is accurate \emph{enough} within a
+given latency, memory and training budget''. Published results on ISIC are difficult to compare
+because they differ in splits, resolutions, augmentation, ensembling and metadata usage
+\cite{cassidy2022isic}.
+
+This work therefore asks a narrow, controlled question: \emph{holding everything else fixed, how
+do a classical CNN (ResNet-50), an efficiency-oriented CNN (EfficientNet-B0) and a hierarchical
+vision transformer (Swin-T) compare on ISIC~2019 in accuracy, generalisation across classes,
+computational cost and interpretability?} Our contributions are:
+\begin{itemize}
+  \item a reproducible, leakage-free experimental protocol (lesion-grouped stratified split,
+        identical fine-tuning recipe) with open code;
+  \item a multi-dimensional comparison covering accuracy, balanced accuracy, macro-F1, AUC,
+        per-class behaviour, parameters, FLOPs, VRAM, training time, convergence speed and
+        inference latency;
+  \item a qualitative Grad-CAM analysis of what each architecture attends to, and a simple
+        soft-voting ensemble that tests whether the families are complementary.
+\end{itemize}
+
+\section{Related Work}
+\textbf{Datasets.} ISIC~2019 merges HAM10000~\cite{tschandl2018ham10000},
+BCN20000~\cite{combalia2019bcn20000} and the MSK dataset into 25,331 dermoscopic images labelled
+with eight diagnoses: melanoma (MEL), melanocytic nevus (NV), basal cell carcinoma (BCC), actinic
+keratosis (AK), benign keratosis (BKL), dermatofibroma (DF), vascular lesion (VASC) and squamous
+cell carcinoma (SCC). The distribution is strongly imbalanced (NV alone is about half of the
+data) and several images may depict the same lesion, which can inflate scores if the split ignores
+lesion identity~\cite{cassidy2022isic}.
+
+\textbf{CNNs on ISIC.} The ISIC~2019 challenge was won by Gessert~\textit{et al.}
+\cite{gessert2020isic2019} with a large ensemble of multi-resolution EfficientNets that also used
+patient metadata, reaching a balanced accuracy of about 0.63 on the (harder, out-of-distribution)
+official test set. Kassani and Kassani~\cite{kassani2019comparative} compared VGG, ResNet,
+Xception and DenseNet~\cite{huang2017densenet} for melanoma detection and found ResNet-50 the most
+accurate of the classical backbones. ImageNet pre-training
+\cite{deng2009imagenet} is used almost universally; Raghu~\textit{et al.}
+\cite{raghu2019transfusion} showed that, for medical images, its main benefit is faster
+convergence rather than a large accuracy gain, and that lightweight networks can match large ones.
+
+\textbf{Transformers in medical imaging.} The ViT~\cite{dosovitskiy2021vit} applies the
+self-attention of~\cite{vaswani2017attention} to image patches; Swin~\cite{liu2021swin} restores
+locality and a feature pyramid through shifted windows, which makes it a drop-in backbone for
+dense tasks (e.g. TransUNet~\cite{chen2021transunet}). Matsoukas~\textit{et al.}
+\cite{matsoukas2021transformers} found that, on small medical datasets, ViTs match CNNs only when
+ImageNet-pretrained. Aladhadh~\textit{et al.}~\cite{aladhadh2022mvt} report competitive results of
+a ViT on HAM10000. Most of these studies compare a single metric and rarely report the cost side;
+our study fills that gap on ISIC~2019 with a strictly shared protocol.
+
+\section{Methodology}
+\subsection{Dataset and split}
+We use the public ISIC~2019 training set (\Ntotal{} images, eight classes), the only part with
+public labels. The official \texttt{lesion\_id} metadata is used to build a
+\emph{lesion-grouped}, class-stratified split of \Ntrain{}/\Nval{}/\Ntest{} images
+(train/validation/test, $\approx$70/15/15\%), so that no lesion appears in two splits
+(Fig.~\ref{fig:dist}). The split is fixed (seed~42) and shared by all models.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\columnwidth]{class_dist.png}
+  \caption{Class distribution of ISIC~2019 and the lesion-grouped train/validation/test split.}
+  \label{fig:dist}
+\end{figure}
+
+\subsection{Pre-processing and augmentation}
+Images are resized once to a shorter side of 256~px and centre-cropped to $256\times256$. During
+training we apply random resized crops to $224\times224$ (scale 0.7--1.0), horizontal and vertical
+flips, rotations up to $20^\circ$ and mild colour jitter; at evaluation the centre $224\times224$
+crop is used. Pixels are normalised with ImageNet statistics. The same pipeline feeds every model.
+
+\subsection{Models}
+All backbones are taken from \texttt{timm}~\cite{wightman2019timm} with ImageNet-1k weights and a
+new eight-way linear head, and are fine-tuned end to end:
+\begin{itemize}
+  \item \textbf{ResNet-50}~\cite{he2016resnet}: the reference residual CNN (\ResnetParams{}~M
+        parameters, \ResnetGflops{}~GFLOPs).
+  \item \textbf{EfficientNet-B0}~\cite{tan2019efficientnet}: a compound-scaled, mobile-oriented
+        CNN (\EffnetParams{}~M, \EffnetGflops{}~GFLOPs).
+  \item \textbf{Swin-T}~\cite{liu2021swin}: a hierarchical vision transformer with shifted-window
+        attention (\SwinParams{}~M, \SwinGflops{}~GFLOPs), chosen over ViT-B because its cost is
+        comparable to ResNet-50, which keeps the comparison fair.
+\end{itemize}
+As an exploratory variant we also evaluate a \textbf{soft-voting ensemble} that averages the
+softmax outputs of the three fine-tuned models.
+
+\subsection{Training protocol (identical for all models)}
+Batch size 32, AdamW~\cite{loshchilov2019adamw} with learning rate $10^{-4}$ and weight decay
+0.05, one warm-up epoch followed by cosine decay, at most 12 epochs with early stopping (patience
+4) on validation macro-F1, gradient clipping at 1.0 and mixed-precision
+training~\cite{micikevicius2018amp}. To counter class imbalance the cross-entropy loss is weighted
+by the inverse square root of the class frequency and smoothed with $\epsilon=0.1$
+\cite{muller2019labelsmoothing}. The checkpoint with the best validation macro-F1 is evaluated
+once on the test split. All runs use a single NVIDIA RTX~4070 Laptop GPU (8~GB).
+
+\subsection{Metrics}
+\emph{Accuracy} and \emph{macro-F1} (required by the course), \emph{balanced accuracy} (the
+official ISC~2019 metric), macro one-vs-rest \emph{AUC} and per-class F1 on the test split.
+\emph{Cost}: trainable parameters, GFLOPs per image, peak training VRAM, mean epoch time, total
+training time, the epoch of the best checkpoint and the number of epochs needed to reach 95\% of
+the best validation F1 (convergence speed), and fp16 inference latency at batch~1 and throughput
+at batch~32. \emph{Interpretability}: Grad-CAM~\cite{selvaraju2017gradcam} on the last
+convolutional stage of the CNNs and on the last Swin block (tokens reshaped to a $7\times7$ map).
+
+\section{Results}
+\subsection{Overall performance and cost}
+Table~\ref{tab:summary} summarises the test results. Training curves are shown in
+Fig.~\ref{fig:curves} and the accuracy/cost trade-off in Fig.~\ref{fig:cost}.
+
+\begin{table*}[t]
+  \caption{Test-split results and computational cost under the shared protocol
+  (fp16 latency on an RTX 4070 Laptop; ``Ep. 95\%'' = epochs to reach 95\% of the best validation macro-F1).}
+  \label{tab:summary}
+  \centering
+  \resizebox{\textwidth}{!}{\input{../results/summary_table.tex}}
+\end{table*}
+
+\begin{figure*}[t]
+  \centering
+  \includegraphics[width=\textwidth]{curves.png}
+  \caption{Training/validation loss, validation accuracy and validation macro-F1 per epoch.}
+  \label{fig:curves}
+\end{figure*}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\columnwidth]{acc_vs_cost.png}
+  \caption{Test macro-F1 versus parameters (left) and batch-1 latency (right).}
+  \label{fig:cost}
+\end{figure}
+
+\subsection{Per-class behaviour}
+Table~\ref{tab:perclass} and Fig.~\ref{fig:perclass} report the per-class F1, and
+Fig.~\ref{fig:cm} the confusion matrices.
+
+\begin{table}[t]
+  \caption{Per-class test F1.}
+  \label{tab:perclass}
+  \centering
+  \resizebox{\columnwidth}{!}{\input{../results/per_class_f1.tex}}
+\end{table}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\columnwidth]{per_class_f1.png}
+  \caption{Per-class test F1 of each model.}
+  \label{fig:perclass}
+\end{figure}
+
+\begin{figure*}[t]
+  \centering
+  \includegraphics[width=0.32\textwidth]{cm_resnet50.png}
+  \includegraphics[width=0.32\textwidth]{cm_efficientnet_b0.png}
+  \includegraphics[width=0.32\textwidth]{cm_swin_t.png}
+  \caption{Row-normalised confusion matrices on the test split (cell labels are raw counts).}
+  \label{fig:cm}
+\end{figure*}
+
+\subsection{Interpretability}
+Fig.~\ref{fig:gradcam} shows Grad-CAM maps for one test image per class.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.96\columnwidth]{gradcam_grid.png}
+  \caption{Grad-CAM evidence maps (target = true class) for one test image per class. Green/red
+  titles mark correct/incorrect predictions.}
+  \label{fig:gradcam}
+\end{figure}
+
+\section{Discussion}
+\input{discussion.tex}
+
+\section{Conclusions and Future Work}
+\input{conclusions.tex}
+
+\section*{Reproducibility}
+Code, split file, training logs and all figures are available in the project repository
+(\texttt{src/}, \texttt{results/}); \texttt{run\_all.ps1} regenerates every number in this paper
+from the public ISIC~2019 download.
+
+\bibliographystyle{IEEEtran}
+\bibliography{refs}
+
+\end{document}

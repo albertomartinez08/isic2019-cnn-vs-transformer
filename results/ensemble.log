@@ -1,0 +1,4 @@
+resnet50+efficientnet_b0                 acc=0.7505 macroF1=0.6154 AUC=0.9315
+resnet50+swin_t                          acc=0.7707 macroF1=0.6459 AUC=0.9389
+efficientnet_b0+swin_t                   acc=0.7774 macroF1=0.6640 AUC=0.9278
+resnet50+efficientnet_b0+swin_t          acc=0.7779 macroF1=0.6646 AUC=0.9417

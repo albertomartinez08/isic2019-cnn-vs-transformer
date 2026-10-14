@@ -1,0 +1,25 @@
+[prepare] extracting C:\Users\josep\datasets\ISIC2019\raw\ISIC_2019_Training_Input.zip ...
+[prepare] extraction done
+[prepare] split sizes: {'train': 17727, 'val': 3844, 'test': 3760}
+label   AK   BCC   BKL   DF   MEL    NV  SCC  VASC
+split                                             
+test   122   510   409   25   634  1937   76    47
+train  618  2255  1821  183  3206  9029  456   159
+val    127   558   394   31   682  1909   96    47
+[prepare] no lesion overlap between splits
+[prepare] resizing 25331 images to 256px ...
+  0/25331
+  2000/25331
+  4000/25331
+  6000/25331
+  8000/25331
+  10000/25331
+  12000/25331
+  14000/25331
+  16000/25331
+  18000/25331
+  20000/25331
+  22000/25331
+  24000/25331
+[prepare] resize done: 25331 files
+PREPARE_EXIT=0

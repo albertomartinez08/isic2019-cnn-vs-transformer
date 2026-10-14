@@ -1,0 +1,8 @@
+=== TRAIN resnet50 17:54 ===
+TRAIN_DONE resnet50 18:15
+=== TRAIN efficientnet_b0 18:15 ===
+TRAIN_DONE efficientnet_b0 18:29
+=== TRAIN swin_t 18:29 ===
+TRAIN_DONE swin_t 18:53
+=== EVAL 18:53 ===
+PIPELINE_DONE 18:57

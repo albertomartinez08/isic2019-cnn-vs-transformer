@@ -1,0 +1,66 @@
+[
+  {
+    "i": 2637,
+    "image": "ISIC_0060832",
+    "true": "MEL",
+    "pred_resnet50": "MEL",
+    "pred_efficientnet_b0": "MEL",
+    "pred_swin_t": "MEL"
+  },
+  {
+    "i": 1527,
+    "image": "ISIC_0031281",
+    "true": "NV",
+    "pred_resnet50": "NV",
+    "pred_efficientnet_b0": "NV",
+    "pred_swin_t": "NV"
+  },
+  {
+    "i": 3478,
+    "image": "ISIC_0070072",
+    "true": "BCC",
+    "pred_resnet50": "BCC",
+    "pred_efficientnet_b0": "NV",
+    "pred_swin_t": "BCC"
+  },
+  {
+    "i": 2832,
+    "image": "ISIC_0062878",
+    "true": "AK",
+    "pred_resnet50": "AK",
+    "pred_efficientnet_b0": "BCC",
+    "pred_swin_t": "AK"
+  },
+  {
+    "i": 3679,
+    "image": "ISIC_0072370",
+    "true": "BKL",
+    "pred_resnet50": "MEL",
+    "pred_efficientnet_b0": "MEL",
+    "pred_swin_t": "MEL"
+  },
+  {
+    "i": 2887,
+    "image": "ISIC_0063605",
+    "true": "DF",
+    "pred_resnet50": "DF",
+    "pred_efficientnet_b0": "DF",
+    "pred_swin_t": "DF"
+  },
+  {
+    "i": 662,
+    "image": "ISIC_0025628",
+    "true": "VASC",
+    "pred_resnet50": "VASC",
+    "pred_efficientnet_b0": "VASC",
+    "pred_swin_t": "VASC"
+  },
+  {
+    "i": 470,
+    "image": "ISIC_0024522",
+    "true": "SCC",
+    "pred_resnet50": "SCC",
+    "pred_efficientnet_b0": "SCC",
+    "pred_swin_t": "BKL"
+  }
+]
